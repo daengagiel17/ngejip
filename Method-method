@@ -1,0 +1,189 @@
+Route::prefix('/driver')->group(function(){
+	Route::post('/login', 'Api\DriverController@login');
+	// Route::post('/booking','Api\DriverController@booking');
+	// Route::post('/off','Api\DriverController@off');
+	// Route::get('/decline/{idbooking}/{idantriandriver}','Api\DriverController@decline');
+	// Route::post('/status/{idbooking}','Api\DriverController@status');
+	// Route::post('/antrian','Api\DriverController@antrian');
+});
+
+Route::prefix('/portal')->group(function(){
+	Route::post('/login', 'Api\AdminController@login');
+	Route::get('/start/{iddriver}','Api\AdminController@start');
+	Route::get('/finish/{iddriver}','Api\AdminController@finish');
+});
+
+
+Driver
+- Login pada driver
+	+ Post : Login
+	+ request : username & password driver
+	+ response : detail driver
+	* Proses :
+		- Validate username & password
+		- Cek username
+		- Cek password
+		- Get All Driver
+
+- Memberikan notifikasi booking
+	+ Post : Booking
+	+ request : iddriver
+	+ response : detail booking
+	* Proses :
+		- Get data booking yang antriannya belum ada konfirmasi
+		- Return data booking
+
+- Menonaktifkan kesiapan driver
+	+ Post : Off
+	+ request : iddriver, tgl_off
+	+ response : success
+	* Proses :
+		- Insert data driver dan tanggal ke tabel driver off
+		- return success
+
+- Menolak permintaan antrian
+	+ Get : Decline
+	+ request : iddriver, idbooking, idantrianbooking
+	+ response : success
+	* Proses :
+		- Get data antrian booking berdasarkan iddriver, idbooking
+		- Set statusAntrian decline
+		- Create data antrian baru menggunakan method dan mengubah idAntrianDriver pada idBooking
+		- return success
+
+- Show antrian driver from booking
+	+ Post : antrian
+	+ request : iddriver
+	+ response : All detail antriandriver & booking
+	* Proses :
+		+ Get data AntrianDriver & Booking by iddriver
+		+ return data
+
+- Show daftar tgl driver off
+ 	+ Post : listdriveroff
+ 	+ request : iddriver
+ 	+ response : list driver_off
+ 	+ Proses :
+ 		+ Get data from driver_off by iddriver
+ 		+ return data
+
+- Delete tanggal driver off
+ 	+ Post : deletedriveroff
+ 	+ request : iddriver_off
+ 	+ response : success
+ 	+ proses : 
+ 		+ Get data driver_off by iddriver_off from tabel driver_off
+ 		+ Delete data
+ 		+ return succes
+
+- Api mengubah status notifikasi  antriandriver_status_baca
+     + Post : ubahstatusnotifikasi
+     + Request : idantriandriver
+     + Response : ubah antriandriver_status_baca menjadi "sudah"
+     + Proses : 
+         - ubah antriandriver_status_baca menjadi "sudah"
+         - return success    
+
+Admin
+
+- Login Admin
+	+ Post = 
+	+ Request = username, password
+	+ Response = detail admin
+	* Proses 
+		- Validate
+		- Get username
+		- Autentikasi
+		- return data admin
+
+- Scan QR input date Start
+	+ Post = start
+	+ Request = barcode driver
+	+ Response = change status
+	* Proses 
+		- Get data antriandriver by QR
+		- Set datetime start di tabel antriandriver
+		- Set status di tabel booking ready to otw 
+		- return change status
+
+- Scan QR input date Finish
+	+ Post = finish
+	+ Request = barcode driver
+	+ Response = change status
+	* Proses 
+		- Get data antriandriver by QR
+		- Set datetime finish
+		- Set status di tabel booking otw to finish 
+		- return change status
+
+$table->string('booking_status_pembayaran'); //cek, pesan, bayar, konfirmasi, lunas
+Proses booking
+	- Client melakukan cek harga dengan input tanggal, jenis, jlmh_penumpang, antar, jemput. Sistem memberi harga saat itu
+	- Client melakukan pesan dengan konfirmasi harga detail
+	- Client melakukan pembayaran dengan input data nama, nomor hp, dan email. Sistem memberi nomor seri pembayaran
+	- Client melakukan konfirmasi. Sistem mencari driver yang jmlh_orderan krg, dimasukkan ke antrian, sambil menunggu konfirmasi. lalu dimasukkan ke sistem memberi konfirmasi booking.
+
+
+http://localhost/api/driver/login
+=> POST (username, password)
+http://localhost/api/driver/booking
+=> POST (iddriver)
+http://localhost/api/driver/off
+=> POST (iddriver, tgl_off)
+http://localhost/api/driver/decline/{idantriandriver}
+=> GET
+http://localhost/api/driver/antrian
+=> POST (iddriver)
+http://localhost/api/driver/ubahstatusnotifikasi
+=> POST (idantriandriver)
+http://localhost/api/driver/deleteddriveroff
+=> POST (iddriver_off)
+http://localhost/api/driver/listdriveroff
+=> POST (iddriver)
+
+http://localhost/api/portal/login
+=> POST (username, password)
+http://localhost/api/portal/start
+=> POST (qr)
+http://localhost/api/portal/finish
+=> POST (qr)
+
+
+<?php
+
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Database\Migrations\Migration;
+
+class Client extends Migration
+{
+    /**
+     * Run the migrations.
+     *
+     * @return void
+     */
+    public function up()
+    {
+        Schema::create('client', function (Blueprint $table) {
+            $table->increments('idclient');
+            $table->string('client_nohp')->unique();
+            $table->string('client_nama');
+            $table->string('client_idotp')->nullable();
+            $table->string('client_email')->nullable();
+            $table->string('client_photo')->nullable();
+            $table->string('api_token',100)->unique();
+            $table->rememberToken();
+            $table->timestamps();
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     *
+     * @return void
+     */
+    public function down()
+    {
+        Schema::dropIfExists('client');
+    }
+}
